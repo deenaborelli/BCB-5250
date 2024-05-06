@@ -1,0 +1,71 @@
+---
+title: "DSeq2"
+author: "Deena Rakshitha Borelli"
+date: "2024-04-29"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# Load required packages
+library(DESeq2)
+library(pheatmap)
+
+# Read in count matrix
+countmatrix <- read.csv("C:/Users/deena/Downloads/all_featureCountOutput.Rmatrix.txt", header = TRUE, row.names = 1, sep = "\t")
+
+# Create experiment labels (two conditions)
+colData <- DataFrame(condition = factor(c("YRI", "YRI", "YRI", "GBR", "GBR", "YRI", "GBR", "GBR", "GBR", "GBR", "YRI", "YRI")))
+
+# Create DESeq2 dataset
+dds <- DESeqDataSetFromMatrix(countmatrix, colData, formula(~ condition))
+
+# Run DESeq2 analysis
+dds <- DESeq(dds)
+
+# Plot MA plot
+plotMA(dds)
+
+# Get differentially expressed genes
+res <- results(dds)
+
+# Order results by BH-adjusted p-value
+resOrdered <- res[order(res$padj), ]
+
+# Display top of ordered results
+head(resOrdered)
+
+# Filter differentially expressed genes based on FDR < 10% and |fold-change| >= 2
+sig <- resOrdered[!is.na(resOrdered$padj) & resOrdered$padj < 0.10 & abs(resOrdered$log2FoldChange) >= 1, ]
+
+# Display top of differentially expressed genes
+head(sig)
+
+# Get row names of differentially expressed genes
+selected <- rownames(sig)
+selected
+
+# Transpose the data frame for heatmap
+data_for_heatmap <- log2(counts(dds, normalized = TRUE)[rownames(dds) %in% selected, ])
+
+# Define color ramp palette
+hmcol <- colorRampPalette(c("green", "yellow", "orange"))(100)
+
+# Replace infinite values with NA
+data_for_heatmap[is.infinite(data_for_heatmap)] <- NA
+
+# Generate heatmap
+pheatmap(data_for_heatmap,
+         color = hmcol,
+         scale = "row",
+         clustering_method = "complete",
+         show_rownames = TRUE,
+         show_colnames = TRUE,
+         fontsize_row = 6,
+         fontsize_col = 12,
+         clustering_distance_rows = "euclidean",
+         clustering_distance_cols = "euclidean")
+
+
+```
+
+
